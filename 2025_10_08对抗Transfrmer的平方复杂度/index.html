@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>从 O(n²) 到 O(n): Transformer 线性注意力机制深度解析</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [
+                    ['$', '$'],
+                    ['\\(', '\\)']
+                ],
+                displayMath: [
+                    ['$$', '$$'],
+                    ['\\[', '\\]']
+                ]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+         :root {
+            --bg-main: #ffffff;
+            --bg-sidebar: #f8f9fa;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --heading-color: #000;
+            --border-color: #dee2e6;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --link-color: #0056b3;
+            --code-bg: #f6f8fa;
+            --code-border: #dfe2e5;
+            --code-text: #24292e;
+            --nav-active-color: #007bff;
+            --nav-hover-color: #0056b3;
+            --quote-border: #007bff;
+            --conclusion-border: #d9534f;
+            --highlight-bg: #fff3cd;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.8;
+            margin: 0;
+            display: flex;
+        }
+        
+        .sidebar {
+            width: 300px;
+            flex-shrink: 0;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .sidebar h2 {
+            font-size: 1.2em;
+            color: var(--heading-color);
+            margin: 0 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .nav-link {
+            display: block;
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            transition: background-color 0.2s, color 0.2s;
+            margin-bottom: 5px;
+        }
+        
+        .nav-link:hover {
+            background-color: #e9ecef;
+            color: var(--nav-hover-color);
+        }
+        
+        .nav-link.active {
+            color: var(--nav-active-color);
+            font-weight: 700;
+            background-color: #e7f3ff;
+        }
+        
+        .main-container {
+            flex-grow: 1;
+            padding: 40px 60px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .content-section {
+            padding-bottom: 60px;
+            margin-bottom: 60px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .content-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 50px;
+            border-bottom: 3px solid var(--border-color);
+            padding-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.8em;
+            margin: 0 0 20px 0;
+            color: var(--heading-color);
+            line-height: 1.3;
+        }
+        
+        .meta-info {
+            color: var(--text-secondary);
+            font-size: 1em;
+            line-height: 1.6;
+        }
+        
+        .author-info {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 0.95em;
+            color: var(--text-secondary);
+        }
+        
+        .highlight-box {
+            background: var(--highlight-bg);
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+        
+        h2.section-title {
+            font-size: 2.2em;
+            color: var(--heading-color);
+            margin-top: 30px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        h3.subsection-title {
+            font-size: 1.8em;
+            color: var(--heading-color);
+            margin-top: 40px;
+            margin-bottom: 25px;
+            padding-left: 15px;
+            border-left: 4px solid var(--nav-active-color);
+        }
+        
+        h4.subsubsection-title {
+            font-size: 1.4em;
+            color: var(--heading-color);
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .md-content p {
+            margin: 0 0 1.5em 0;
+            text-align: justify;
+        }
+        
+        .md-content ul,
+        .md-content ol {
+            padding-left: 30px;
+            margin: 0 0 1.5em 0;
+        }
+        
+        .md-content li {
+            margin-bottom: 1em;
+            line-height: 1.8;
+        }
+        
+        .md-content strong {
+            color: var(--heading-color);
+            font-weight: 700;
+        }
+        
+        .md-content a {
+            color: var(--link-color);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--link-color);
+        }
+        
+        .md-content a:hover {
+            border-bottom: 1px solid var(--link-color);
+        }
+        
+        .md-content pre {
+            background-color: var(--code-bg);
+            border: 1px solid var(--code-border);
+            border-radius: 6px;
+            padding: 20px;
+            overflow-x: auto;
+            font-size: 0.9em;
+            margin: 25px 0;
+            color: var(--code-text);
+            line-height: 1.6;
+        }
+        
+        .md-content code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        
+        .md-content pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        
+        .formula-block {
+            background: #f9f9f9;
+            border: 1px solid #e1e1e1;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            overflow-x: auto;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 0.95em;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px 15px;
+            text-align: left;
+        }
+        
+        .comparison-table th {
+            background-color: var(--bg-sidebar);
+            font-weight: 700;
+            color: var(--heading-color);
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .paper-ref {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin-top: -15px;
+            margin-bottom: 25px;
+            font-style: italic;
+        }
+        
+        .algorithm-box {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        
+        .algorithm-box h4 {
+            margin-top: 0;
+            color: var(--heading-color);
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+        
+        .conclusion {
+            margin-top: 50px;
+            padding: 30px;
+            text-align: left;
+            border: 2px solid var(--conclusion-border);
+            background-color: #fdf7f7;
+            border-radius: 8px;
+        }
+        
+        .conclusion h3 {
+            margin: 0 0 20px 0;
+            color: #721c24;
+            font-size: 1.6em;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+        
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 250px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .main-container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            h2.section-title {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="sidebar">
+        <h2>文章目录</h2>
+        <a href="#section-1" class="nav-link">1. Transformer 的复杂度瓶颈</a>
+        <a href="#section-2" class="nav-link">2. 线性注意力的核心思想</a>
+        <a href="#section-3" class="nav-link">3. 遗忘机制：数据无关衰减</a>
+        <a href="#section-4" class="nav-link">4. 遗忘机制：数据相关门控</a>
+        <a href="#section-5" class="nav-link">5. 在线学习视角：Delta法则</a>
+        <a href="#section-6" class="nav-link">6. 状态空间模型的融合</a>
+        <a href="#section-7" class="nav-link">7. 对数线性复杂度方案</a>
+        <a href="#section-8" class="nav-link">8. 线性思想对Softmax的影响</a>
+        <a href="#section-9" class="nav-link">9. 硬件实现与优化</a>
+        <a href="#section-10" class="nav-link">10. 工业级应用实践</a>
+        <a href="#section-11" class="nav-link">11. 总结与展望</a>
+        <a href="#section-ref" class="nav-link">12. 参考文献</a>
+    </nav>
+
+    <main class="main-container">
+        <header class="page-header">
+            <h1>从 O(n²) 到 O(n): Transformer 线性注意力机制深度解析</h1>
+            <div class="meta-info">
+                全面解读线性注意力如何突破 Transformer 的计算瓶颈<br> 涵盖核心原理、数学推导、硬件实现与工业应用
+            </div>
+            <div class="author-info" id="author-info">
+                作者：荒原猎码人Zero
+            </div>
+        </header>
+
+        <section id="section-1" class="content-section">
+            <h2 class="section-title">1. Transformer 的复杂度瓶颈：平方复杂度的深层分析</h2>
+            <div class="md-content">
+                <p>自 2017 年 <a href="https://arxiv.org/abs/1706.03762" target="_blank">《Attention is All You Need》</a> 论文发布以来，Transformer 架构凭借其强大的并行计算能力和对长距离依赖的卓越建模能力，已经成为现代大型语言模型（LLM）、计算机视觉模型以及多模态模型的核心架构。然而，尽管 Transformer 取得了巨大成功，其核心组件——自注意力（Self-Attention）机制——却存在一个根本性的计算瓶颈。</p>
+
+                <h3 class="subsection-title">1.1 标准注意力机制的数学形式</h3>
+
+                <p>标准的缩放点积注意力（Scaled Dot-Product Attention）机制的计算过程可以表示为：</p>
+
+                <div class="formula-block">
+                    $$ \text{Attention}(\boldsymbol{Q}, \boldsymbol{K}, \boldsymbol{V}) = \text{softmax}\left(\frac{\boldsymbol{Q}\boldsymbol{K}^\top}{\sqrt{d}}\right)\boldsymbol{V} $$
+                </div>
+
+                <p>其中：</p>
+                <ul>
+                    <li><strong>$\boldsymbol{Q} \in \mathbb{R}^{n \times d}$</strong>：查询（Query）矩阵，每一行代表一个查询向量</li>
+                    <li><strong>$\boldsymbol{K} \in \mathbb{R}^{n \times d}$</strong>：键（Key）矩阵，每一行代表一个键向量</li>
+                    <li><strong>$\boldsymbol{V} \in \mathbb{R}^{n \times d}$</strong>：值（Value）矩阵，每一行代表一个值向量</li>
+                    <li><strong>$n$</strong>：序列长度（token 数量）</li>
+                    <li><strong>$d$</strong>：每个注意力头的维度</li>
+                    <li><strong>$\sqrt{d}$</strong>：缩放因子，用于稳定梯度</li>
+                </ul>
+
+                <h3 class="subsection-title">1.2 计算复杂度的详细分析</h3>
+
+                <p>让我们详细分解注意力机制的计算过程，理解复杂度的来源：</p>
+
+                <h4 class="subsubsection-title">第一步：计算注意力分数矩阵</h4>
+                <p>首先需要计算 $\boldsymbol{Q}$ 与 $\boldsymbol{K}$ 的转置 $\boldsymbol{K}^\top$ 的矩阵乘法：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{S} = \frac{\boldsymbol{Q}\boldsymbol{K}^\top}{\sqrt{d}} \in \mathbb{R}^{n \times n} $$
+                </div>
+                <p>这一步的复杂度分析：</p>
+                <ul>
+                    <li>矩阵 $\boldsymbol{Q}$ 的维度：$n \times d$</li>
+                    <li>矩阵 $\boldsymbol{K}^\top$ 的维度：$d \times n$</li>
+                    <li>结果矩阵 $\boldsymbol{S}$ 的维度：$n \times n$</li>
+                    <li><strong>计算复杂度：$O(n^2 d)$</strong></li>
+                    <li><strong>内存占用：$O(n^2)$</strong>（存储注意力分数矩阵）</li>
+                </ul>
+
+                <h4 class="subsubsection-title">第二步：应用 Softmax 归一化</h4>
+                <p>对注意力分数矩阵的每一行应用 softmax 函数：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{A} = \text{softmax}(\boldsymbol{S}) = \text{softmax}\left(\frac{\boldsymbol{Q}\boldsymbol{K}^\top}{\sqrt{d}}\right) $$
+                </div>
+                <p>其中，对于第 $i$ 行：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{A}_{i,j} = \frac{\exp(\boldsymbol{S}_{i,j})}{\sum_{k=1}^{n} \exp(\boldsymbol{S}_{i,k})} $$
+                </div>
+                <ul>
+                    <li><strong>计算复杂度：$O(n^2)$</strong>（每个元素需要指数运算和归一化）</li>
+                    <li><strong>内存占用：$O(n^2)$</strong>（注意力权重矩阵）</li>
+                </ul>
+
+                <h4 class="subsubsection-title">第三步：加权求和值向量</h4>
+                <p>使用注意力权重对值矩阵进行加权求和：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{O} = \boldsymbol{A}\boldsymbol{V} $$
+                </div>
+                <ul>
+                    <li>矩阵 $\boldsymbol{A}$ 的维度：$n \times n$</li>
+                    <li>矩阵 $\boldsymbol{V}$ 的维度：$n \times d$</li>
+                    <li>结果矩阵 $\boldsymbol{O}$ 的维度：$n \times d$</li>
+                    <li><strong>计算复杂度：$O(n^2 d)$</strong></li>
+                </ul>
+
+                <h4 class="subsubsection-title">总体复杂度汇总</h4>
+                <div class="highlight-box">
+                    <strong>时间复杂度：</strong>
+                    <ul>
+                        <li>$O(n^2 d)$（矩阵乘法 $\boldsymbol{Q}\boldsymbol{K}^\top$）</li>
+                        <li>$O(n^2)$（Softmax 归一化）</li>
+                        <li>$O(n^2 d)$（矩阵乘法 $\boldsymbol{A}\boldsymbol{V}$）</li>
+                        <li><strong>总计：$O(n^2 d)$</strong></li>
+                    </ul>
+                    <strong>空间复杂度：</strong>
+                    <ul>
+                        <li><strong>$O(n^2)$</strong>（存储注意力矩阵 $\boldsymbol{A}$）</li>
+                        <li>$O(nd)$（存储 Q、K、V 和输出 O）</li>
+                    </ul>
+                </div>
+
+                <h3 class="subsection-title">1.3 长序列场景下的实际影响</h3>
+
+                <p>当序列长度 $n$ 较小时（例如 $n = 512$ 或 $n = 1024$），平方复杂度的开销尚可接受。然而，随着应用场景对长上下文能力的要求越来越高，这种复杂度会导致严重的性能问题。</p>
+
+                <h4 class="subsubsection-title">具体计算示例</h4>
+                <p>以一个实际的例子来说明问题的严重性。假设我们有：</p>
+                <ul>
+                    <li>序列长度：$n = 4096$</li>
+                    <li>头维度：$d = 64$</li>
+                    <li>注意力头数：$h = 32$</li>
+                </ul>
+
+                <p><strong>标准 Softmax 注意力的计算量：</strong></p>
+                <ul>
+                    <li>单个头的 FLOPs：$2 \times 4096^2 \times 64 \approx 2.1 \times 10^9$ FLOPs</li>
+                    <li>所有头的总 FLOPs：$32 \times 2.1 \times 10^9 \approx 6.7 \times 10^{10}$ FLOPs</li>
+                    <li>内存占用：$32 \times 4096^2 \times 4 \text{ bytes} \approx 2.1 \text{ GB}$</li>
+                </ul>
+
+                <p>现在假设序列长度增加到 $n = 131072$（约 128K tokens）：</p>
+                <ul>
+                    <li>序列长度增加了 $\frac{131072}{4096} = 32$ 倍</li>
+                    <li>计算量增加了 $32^2 = 1024$ 倍</li>
+                    <li>单个头的 FLOPs：约 $2.2 \times 10^{12}$ FLOPs</li>
+                    <li>所有头的总 FLOPs：约 $7.0 \times 10^{13}$ FLOPs</li>
+                    <li>内存占用：约 $2.2 \text{ TB}$（显然无法实现）</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <strong>关键观察：</strong>序列长度每增加一倍，计算量增加四倍，内存占用也增加四倍。这种平方级的增长使得处理超长序列变得不切实际。
+                </div>
+
+                <h3 class="subsection-title">1.4 为什么需要线性注意力</h3>
+
+                <p>在实际应用中，我们经常需要处理以下场景：</p>
+                <ul>
+                    <li><strong>长文档处理：</strong>完整的书籍、研究论文、法律文件</li>
+                    <li><strong>视频理解：</strong>高分辨率视频的帧序列</li>
+                    <li><strong>代码分析：</strong>大型代码库的理解</li>
+                    <li><strong>多轮对话：</strong>保持长期对话历史</li>
+                    <li><strong>医疗记录：</strong>患者的完整病历</li>
+                </ul>
+
+                <p>在这些场景中，序列长度可能达到数十万甚至上百万个 token。标准的 Softmax 注意力在这种规模下完全不可行。因此，研究者们开始探索各种高效的注意力机制，其中线性注意力是最有前景的方向之一。</p>
+
+                <p>线性注意力的核心目标是：<strong>在保持注意力机制表达能力的同时，将时间复杂度从 $O(n^2 d)$ 降低到 $O(n d^2)$，将空间复杂度从 $O(n^2)$ 降低到 $O(d^2)$。</strong>这样，模型的计算和内存开销就与序列长度呈线性关系，而不是平方关系。</p>
+            </div>
+        </section>
+
+        <section id="section-2" class="content-section">
+            <h2 class="section-title">2. 线性注意力的核心思想：矩阵乘法顺序的巧妙变换</h2>
+            <div class="md-content">
+                <p>线性注意力的核心创新在于：通过引入可分解的核函数（Kernel Function）来替代 softmax，从而利用矩阵乘法的结合律改变计算顺序，实现从平方复杂度到线性复杂度的转变。</p>
+
+                <h3 class="subsection-title">2.1 核函数的引入</h3>
+
+                <p>在标准注意力中，两个向量 $\boldsymbol{q}$ 和 $\boldsymbol{k}$ 之间的相似度通过 softmax 计算：</p>
+                <div class="formula-block">
+                    $$ \text{sim}(\boldsymbol{q}, \boldsymbol{k}) = \frac{\exp(\boldsymbol{q}^\top \boldsymbol{k})}{\sum_{j} \exp(\boldsymbol{q}^\top \boldsymbol{k}_j)} $$
+                </div>
+
+                <p>线性注意力的关键想法是：能否找到一个函数 $\phi(\cdot)$，使得这种相似度可以被近似为：</p>
+                <div class="formula-block">
+                    $$ \text{sim}(\boldsymbol{q}, \boldsymbol{k}) \approx \phi(\boldsymbol{q})^\top \phi(\boldsymbol{k}) $$
+                </div>
+
+                <p>这里的 $\phi(\cdot)$ 被称为<strong>特征映射函数</strong>或<strong>核函数</strong>。如果我们能找到这样的函数，注意力计算就可以重写为：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{o}_t = \sum_{j=1}^t \phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_j) \boldsymbol{v}_j $$
+                </div>
+
+                <h3 class="subsection-title">2.2 矩阵结合律的应用</h3>
+
+                <p>现在，魔法来了。由于 $\phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_j)$ 是一个标量，我们可以利用矩阵乘法的结合律，将求和的顺序改变：</p>
+
+                <div class="formula-block">
+                    $$ \begin{aligned} \boldsymbol{o}_t &= \sum_{j=1}^t \phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_j) \boldsymbol{v}_j \\ &= \phi(\boldsymbol{q}_t)^\top \sum_{j=1}^t \phi(\boldsymbol{k}_j) \boldsymbol{v}_j^\top \\ &= \phi(\boldsymbol{q}_t)^\top \boldsymbol{S}_t
+                    \end{aligned} $$
+                </div>
+
+                <p>其中，我们定义了一个<strong>状态矩阵</strong>：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{S}_t = \sum_{j=1}^t \phi(\boldsymbol{k}_j) \boldsymbol{v}_j^\top \in \mathbb{R}^{d \times d} $$
+                </div>
+
+                <h3 class="subsection-title">2.3 递归形式：RNN 的回归</h3>
+
+                <p>更重要的是，这个状态矩阵可以通过递归方式高效更新：</p>
+                <div class="formula-block">
+                    $$ \begin{cases} \boldsymbol{S}_0 = \boldsymbol{0} \\ \boldsymbol{S}_t = \boldsymbol{S}_{t-1} + \phi(\boldsymbol{k}_t) \boldsymbol{v}_t^\top \\ \boldsymbol{o}_t = \phi(\boldsymbol{q}_t)^\top \boldsymbol{S}_t \end{cases} $$
+                </div>
+
+                <p>这个形式与经典的循环神经网络（RNN）惊人地相似！事实上，线性注意力可以被视为一种特殊的 RNN，其隐状态是一个 $d \times d$ 的矩阵。</p>
+
+                <h3 class="subsection-title">2.4 复杂度的详细对比</h3>
+
+                <h4 class="subsubsection-title">训练阶段（并行计算）</h4>
+
+                <p><strong>标准 Softmax 注意力：</strong></p>
+                <ul>
+                    <li>计算 $\boldsymbol{Q}\boldsymbol{K}^\top$：$O(n^2 d)$</li>
+                    <li>应用 Softmax：$O(n^2)$</li>
+                    <li>计算 $\boldsymbol{A}\boldsymbol{V}$：$O(n^2 d)$</li>
+                    <li><strong>总计：$O(n^2 d)$</strong></li>
+                    <li><strong>内存：$O(n^2)$</strong></li>
+                </ul>
+
+                <p><strong>线性注意力（并行形式）：</strong></p>
+                <ul>
+                    <li>计算 $\phi(\boldsymbol{K})^\top \boldsymbol{V}$：$O(n d^2)$</li>
+                    <li>计算 $\phi(\boldsymbol{Q}) (\phi(\boldsymbol{K})^\top \boldsymbol{V})$：$O(n d^2)$</li>
+                    <li><strong>总计：$O(n d^2)$</strong></li>
+                    <li><strong>内存：$O(d^2)$</strong></li>
+                </ul>
+
+                <div class="highlight-box">
+                    <strong>关键改进：</strong>
+                    <ul>
+                        <li>时间复杂度：从 $O(n^2 d)$ 降至 $O(n d^2)$</li>
+                        <li>当 $n \gg d$ 时（这在实践中很常见），线性注意力显著更快</li>
+                        <li>内存占用：从 $O(n^2)$ 降至 $O(d^2)$，这是一个巨大的改进</li>
+                    </ul>
+                </div>
+
+                <h4 class="subsubsection-title">推理阶段（自回归生成）</h4>
+
+                <p><strong>标准 Softmax 注意力：</strong></p>
+                <ul>
+                    <li>每个新 token 需要与所有历史 token 计算注意力</li>
+                    <li>第 $t$ 步的复杂度：$O(t d)$</li>
+                    <li>生成 $n$ 个 token 的总复杂度：$O(n^2 d)$</li>
+                    <li><strong>内存：$O(n d)$</strong>（KV Cache）</li>
+                </ul>
+
+                <p><strong>线性注意力（递归形式）：</strong></p>
+                <ul>
+                    <li>每个新 token 只需更新固定大小的状态矩阵</li>
+                    <li>第 $t$ 步的复杂度：$O(d^2)$</li>
+                    <li>生成 $n$ 个 token 的总复杂度：$O(n d^2)$</li>
+                    <li><strong>内存：$O(d^2)$</strong>（状态矩阵）</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <strong>推理优势：</strong>
+                    <ul>
+                        <li>每步推理时间：从 $O(t d)$ 降至 $O(d^2)$，即<strong>常数时间</strong></li>
+                        <li>内存占用：从 $O(n d)$ 降至 $O(d^2)$，<strong>不随序列长度增长</strong></li>
+                        <li>这使得线性注意力在长序列生成任务中具有巨大优势</li>
+                    </ul>
+                </div>
+
+                <h3 class="subsection-title">2.5 常用的核函数选择</h3>
+
+                <p>线性注意力的性能很大程度上取决于核函数 $\phi(\cdot)$ 的选择。以下是几种常见的核函数：</p>
+
+                <h4 class="subsubsection-title">2.5.1 ELU 核（Linear Transformer）</h4>
+                <div class="formula-block">
+                    $$ \phi(\boldsymbol{x}) = \text{ELU}(\boldsymbol{x}) + 1 $$
+                </div>
+                <p>其中 ELU（Exponential Linear Unit）定义为：</p>
+                <div class="formula-block">
+                    $$ \text{ELU}(x) = \begin{cases} x & \text{if } x > 0 \\ e^x - 1 & \text{if } x \leq 0 \end{cases} $$
+                </div>
+                <ul>
+                    <li><strong>优点：</strong>处处可微，平滑过渡</li>
+                    <li><strong>缺点：</strong>近似精度有限</li>
+                </ul>
+
+                <h4 class="subsubsection-title">2.5.2 随机特征（Performer）</h4>
+                <div class="formula-block">
+                    $$ \phi(\boldsymbol{x}) = \frac{1}{\sqrt{m}} \begin{bmatrix} \exp(\boldsymbol{w}_1^\top \boldsymbol{x}) \\ \exp(\boldsymbol{w}_2^\top \boldsymbol{x}) \\ \vdots \\ \exp(\boldsymbol{w}_m^\top \boldsymbol{x}) \end{bmatrix} $$
+                </div>
+                <p>其中 $\boldsymbol{w}_i$ 是从标准正态分布中采样的随机向量。</p>
+                <ul>
+                    <li><strong>优点：</strong>提供对 softmax 的无偏估计</li>
+                    <li><strong>缺点：</strong>需要更高的特征维度 $m$ 来获得良好近似</li>
+                </ul>
+
+                <h4 class="subsubsection-title">2.5.3 余弦核（cosFormer）</h4>
+                <div class="formula-block">
+                    $$ \phi(\boldsymbol{x}) = \text{ReLU}(\boldsymbol{x}) $$
+                </div>
+                <p>结合位置编码，利用余弦函数的可分解性：</p>
+                <div class="formula-block">
+                    $$ \cos(\boldsymbol{q}^\top \boldsymbol{k}) = \text{Re}(e^{i\boldsymbol{q}^\top} e^{-i\boldsymbol{k}^\top}) $$
+                </div>
+                <ul>
+                    <li><strong>优点：</strong>更好地保留位置信息</li>
+                    <li><strong>缺点：</strong>实现相对复杂</li>
+                </ul>
+
+                <h3 class="subsection-title">2.6 归一化的必要性</h3>
+
+                <p>在实践中，我们通常需要对线性注意力的输出进行归一化，以稳定训练和提升性能：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{o}_t = \frac{\phi(\boldsymbol{q}_t)^\top \boldsymbol{S}_t}{\phi(\boldsymbol{q}_t)^\top \boldsymbol{D}_t} $$
+                </div>
+                <p>其中归一化因子：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{D}_t = \sum_{j=1}^t \phi(\boldsymbol{k}_j) $$
+                </div>
+                <p>同样可以递归更新：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{D}_t = \boldsymbol{D}_{t-1} + \phi(\boldsymbol{k}_t) $$
+                </div>
+
+                <p>或者，在现代实现中，通常直接使用 LayerNorm 或 GroupNorm 来归一化输出，这样可以避免显式计算归一化因子。</p>
+
+                <h3 class="subsection-title">2.7 小结</h3>
+
+                <p>线性注意力通过三个关键步骤实现了从平方到线性复杂度的突破：</p>
+                <ol>
+                    <li><strong>核函数替代：</strong>用可分解的核函数 $\phi(\cdot)$ 替代 softmax</li>
+                    <li><strong>顺序变换：</strong>利用矩阵乘法结合律改变计算顺序</li>
+                    <li><strong>递归状态：</strong>维护固定大小的状态矩阵，实现常数内存推理</li>
+                </ol>
+
+                <p>然而，最初的线性注意力也存在明显的局限：它将所有历史信息等权重地累积，缺乏对近期信息的关注能力。这促使研究者引入了<strong>遗忘机制</strong>，这将是下一节的主题。</p>
+            </div>
+        </section>
+
+        <section id="section-3" class="content-section">
+            <h2 class="section-title">3. 遗忘机制：数据无关衰减的设计</h2>
+            <div class="md-content">
+                <p>早期的线性注意力模型将所有历史信息等权重地累加到状态矩阵中。这种方式虽然简单，但很快暴露出一个问题：随着序列变长，状态矩阵会逐渐"饱和"，早期信息和近期信息的权重相同，导致模型难以聚焦于更重要的近期上下文。这违背了自然语言处理中常见的"就近原则"（Recency Bias）。</p>
+
+                <h3 class="subsection-title">3.1 问题的本质</h3>
+
+                <p>考虑基础线性注意力的状态更新：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{S}_t = \boldsymbol{S}_{t-1} + \boldsymbol{k}_t \boldsymbol{v}_t^\top $$
+                </div>
+
+                <p>展开这个递归关系：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{S}_t = \sum_{j=1}^t \boldsymbol{k}_j \boldsymbol{v}_j^\top $$
+                </div>
+
+                <p>我们可以看到，第 1 个 token 和第 $t$ 个 token 对当前状态的贡献是相同的。这导致了几个问题：</p>
+                <ul>
+                    <li><strong>信息饱和：</strong>随着序列变长，状态矩阵的元素会无限增大</li>
+                    <li><strong>缺乏重点：</strong>无法区分重要的近期信息和过时的早期信息</li>
+                    <li><strong>梯度问题：</strong>在反向传播时，远期梯度的影响过大</li>
+                </ul>
+
+                <h3 class="subsection-title">3.2 Retentive Network (RetNet)：固定指数衰减</h3>
+                <div class="paper-ref">
+                    论文：<a href="https://arxiv.org/abs/2307.08621" target="_blank">Retentive Network: A Successor to Transformer for Large Language Models</a>
+                </div>
+
+                <p>RetNet 通过引入一个固定的、可学习的衰减因子 $\gamma \in (0, 1)$ 来解决这个问题：</p>
+
+                <h4 class="subsubsection-title">3.2.1 递归形式</h4>
+                <div class="formula-block">
+                    $$ \begin{cases} \boldsymbol{S}_0 = \boldsymbol{0} \\ \boldsymbol{S}_t = \gamma \boldsymbol{S}_{t-1} + \boldsymbol{k}_t \boldsymbol{v}_t^\top \\ \boldsymbol{o}_t = \boldsymbol{q}_t \boldsymbol{S}_t \end{cases} $$
+                </div>
+
+                <p>展开递归关系，我们得到：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{S}_t = \sum_{j=1}^t \gamma^{t-j} \boldsymbol{k}_j \boldsymbol{v}_j^\top $$
+                </div>
+
+                <p>这意味着，第 $j$ 个 token 在时间步 $t$ 的权重是 $\gamma^{t-j}$。由于 $\gamma
+                    < 1$，距离越远的 token，其权重呈指数衰减。</p>
+
+                        <h4 class="subsubsection-title">3.2.2 并行形式</h4>
+
+                        <p>RetNet 的精妙之处在于，它证明了这种递归形式可以等价地写成一种并行形式，用于高效训练：</p>
+                        <div class="formula-block">
+                            $$ \text{Retention}(\boldsymbol{Q}, \boldsymbol{K}, \boldsymbol{V}) = (\boldsymbol{Q}\boldsymbol{K}^\top \odot \boldsymbol{D})\boldsymbol{V} $$
+                        </div>
+
+                        <p>其中 $\boldsymbol{D} \in \mathbb{R}^{n \times n}$ 是一个包含指数衰减的因果掩码矩阵：</p>
+                        <div class="formula-block">
+                            $$ \boldsymbol{D}_{i,j} = \begin{cases} \gamma^{i-j} & \text{if } i \geq j \\ 0 & \text{if } i
+                            < j \end{cases} $$ </div>
+
+                                <p>这个矩阵的结构如下（以 $n=6$ 为例）：</p>
+                                <div class="formula-block">
+                                    $$ \boldsymbol{D} = \begin{bmatrix} 1 & 0 & 0 & 0 & 0 & 0 \\ \gamma & 1 & 0 & 0 & 0 & 0 \\ \gamma^2 & \gamma & 1 & 0 & 0 & 0 \\ \gamma^3 & \gamma^2 & \gamma & 1 & 0 & 0 \\ \gamma^4 & \gamma^3 & \gamma^2 & \gamma & 1 & 0 \\ \gamma^5 & \gamma^4 & \gamma^3
+                                    & \gamma^2 & \gamma & 1 \end{bmatrix} $$
+                                </div>
+
+                                <h4 class="subsubsection-title">3.2.3 分块并行形式</h4>
+
+                                <p>为了在训练时充分利用 GPU 的并行能力，同时避免直接实例化巨大的 $n \times n$ 矩阵，RetNet 提出了一种分块（Chunk-wise）并行形式。将序列分为多个长度为 $B$ 的块：</p>
+
+                                <p>对于第 $i$ 个块，其输出 $\boldsymbol{O}_{[i]}$ 由两部分组成：</p>
+                                <ol>
+                                    <li><strong>块内计算 (Intra-chunk)：</strong>块内的 token 相互进行 retention 计算。</li>
+                                    <li><strong>块间计算 (Cross-chunk)：</strong>块内的 token 接收来自前面所有块的 retention 信息。</li>
+                                </ol>
+
+                                <p><strong>块内计算：</strong></p>
+                                <div class="formula-block">
+                                    $$ \boldsymbol{O}_{[i]}^{\text{intra}} = (\boldsymbol{Q}_{[i]} \boldsymbol{K}_{[i]}^\top \odot \boldsymbol{D}_{\text{intra}}) \boldsymbol{V}_{[i]} $$
+                                </div>
+                                <p>其中 $\boldsymbol{D}_{\text{intra}}$ 是一个 $B \times B$ 的衰减矩阵。</p>
+
+                                <p><strong>块间计算：</strong></p>
+                                <p>第 $i$ 个块需要接收来自第 $i-1$ 个块的最终状态 $\boldsymbol{S}_{i-1}$。这个状态需要衰减 $B$ 步才能传递到第 $i$ 个块的开头。所以，第 $i$ 个块的初始状态是 $\gamma^B \boldsymbol{S}_{i-1}$。</p>
+                                <div class="formula-block">
+                                    $$ \boldsymbol{O}_{[i]}^{\text{cross}} = \boldsymbol{Q}_{[i]} (\gamma^B \boldsymbol{S}_{i-1}) $$
+                                </div>
+
+                                <p>总输出为：</p>
+                                <div class="formula-block">
+                                    $$ \boldsymbol{O}_{[i]} = \boldsymbol{O}_{[i]}^{\text{intra}} + \boldsymbol{O}_{[i]}^{\text{cross}} $$
+                                </div>
+
+                                <p>这种分块计算方式将复杂度降低到 $O(n B d)$，同时保持了高度的并行性，是现代线性注意力实现的标准做法。</p>
+
+                                <h3 class="subsection-title">3.3 RWKV：元素级衰减</h3>
+                                <div class="paper-ref">
+                                    论文：<a href="https://arxiv.org/abs/2305.13048" target="_blank">RWKV: Reinventing RNNs for the Transformer Era</a>
+                                </div>
+
+                                <p>RWKV（Receptance Weighted Key Value）采用了另一种形式的线性注意力和数据无关衰减，它将状态从矩阵简化为了向量。</p>
+
+                                <h4 class="subsubsection-title">3.3.1 Time-mixing 模块</h4>
+
+                                <p>RWKV 的核心是 Time-mixing 模块，其递归形式可以写成：</p>
+                                <div class="formula-block">
+                                    $$ \begin{aligned} \boldsymbol{s}_{t,c}^{\text{num}} &= e^{-\boldsymbol{w}_c} \boldsymbol{s}_{t-1,c}^{\text{num}} + e^{\boldsymbol{k}_{t,c}} \boldsymbol{v}_{t,c} \\ \boldsymbol{s}_{t,c}^{\text{den}} &= e^{-\boldsymbol{w}_c} \boldsymbol{s}_{t-1,c}^{\text{den}}
+                                    + e^{\boldsymbol{k}_{t,c}} \\ \boldsymbol{o}_{t,c} &= \boldsymbol{r}_{t,c} \odot \frac{\boldsymbol{s}_{t,c}^{\text{num}}}{\boldsymbol{s}_{t,c}^{\text{den}}} \end{aligned} $$
+                                </div>
+
+                                <p>其中：</p>
+                                <ul>
+                                    <li>$\boldsymbol{w}$ 是可学习的衰减率（对应 $\gamma$）。</li>
+                                    <li>$\boldsymbol{k}_t, \boldsymbol{v}_t$ 是 key 和 value。</li>
+                                    <li>$\boldsymbol{r}_t$ 是一个额外的门控，称为 receptance。</li>
+                                    <li>状态被分解为分子状态 $\boldsymbol{s}^{\text{num}}$ 和分母状态 $\boldsymbol{s}^{\text{den}}$。</li>
+                                </ul>
+
+                                <p>这种形式可以看作是 Attention-Free Transformer (AFT) 的一种带衰减的变体，将状态从外积矩阵降维到了向量，进一步提升了效率。</p>
+
+                                <h3 class="subsection-title">3.4 小结</h3>
+
+                                <p>数据无关的衰减机制，如 RetNet 的固定指数衰减和 RWKV 的元素级衰减，为线性注意力引入了关键的"遗忘"能力。它们通过一个固定的、与输入内容无关的机制来模拟"就近原则"。这种设计简单、高效，且易于并行化。</p>
+
+                                <p>然而，固定的衰减模式缺乏灵活性。在某些情况下，模型可能需要记住非常久远但至关重要的信息（例如故事开头的主角名字），而在另一些情况下，可能需要快速忘记瞬时出现的干扰信息。这催生了对<strong>数据相关门控</strong>的需求。</p>
+                        </div>
+        </section>
+
+        <section id="section-4" class="content-section">
+            <h2 class="section-title">4. 遗忘机制：数据相关门控</h2>
+            <div class="md-content">
+                <p>数据无关的衰减虽然高效，但其“一视同仁”的遗忘策略限制了模型的表达能力。为了实现更灵活的上下文管理，研究者们引入了数据相关门控（Data-Dependent Gating），让模型能够根据当前输入动态地决定保留或遗忘历史信息。</p>
+
+                <h3 class="subsection-title">4.1 门控线性注意力 (Gated Linear Attention, GLA)</h3>
+                <div class="paper-ref">
+                    论文：<a href="https://arxiv.org/abs/2312.06635" target="_blank">Gated Linear Attention Transformers with Hardware-Efficient Training</a>
+                </div>
+
+                <p>GLA 是将数据相关门控引入线性注意力的代表性工作。它将 RetNet 中的固定衰减因子 $\gamma$ 替换为一个由当前输入 $\boldsymbol{x}_t$ 计算出的门控向量 $\boldsymbol{g}_t$。</p>
+
+                <h4 class="subsubsection-title">4.1.1 递归形式</h4>
+
+                <p>GLA 的递归形式通常作用于元素级（element-wise）或组级（group-wise）的状态。以组级为例，状态更新变为：</p>
+                <div class="formula-block">
+                    $$ \begin{cases} \boldsymbol{g}_t = \sigma(\boldsymbol{W}_g \boldsymbol{x}_t) \\ \boldsymbol{S}_t = \text{diag}(\boldsymbol{g}_t) \boldsymbol{S}_{t-1} + \boldsymbol{k}_t \boldsymbol{v}_t^\top \\ \boldsymbol{o}_t = \boldsymbol{q}_t \boldsymbol{S}_t \end{cases}
+                    $$
+                </div>
+
+                <p>这里，$\boldsymbol{g}_t$ 是一个向量，$\text{diag}(\boldsymbol{g}_t)$ 将其转换为一个对角矩阵。这意味着每个通道或特征组都有自己独立的、动态的衰减率。当 $\boldsymbol{g}_{t,i}$ 接近 1 时，第 $i$ 个通道会记住历史信息；当它接近 0 时，则会快速遗忘。</p>
+
+                <h4 class="subsubsection-title">4.1.2 并行形式的挑战</h4>
+
+                <p>与 RetNet 不同，数据相关的门控使得并行化变得更加复杂。展开递归关系：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{S}_t = \sum_{j=1}^t \left( \prod_{m=j+1}^t \boldsymbol{g}_m \right) \boldsymbol{k}_j \boldsymbol{v}_j^\top $$
+                </div>
+
+                <p>这里的衰减项 $\prod_{m=j+1}^t \boldsymbol{g}_m$ 依赖于从 $j+1$ 到 $t$ 的所有输入，无法再表示为一个简单的 Toeplitz 矩阵。因此，直接的并行计算变得困难。</p>
+
+                <h4 class="subsubsection-title">4.1.3 并行扫描 (Parallel Scan)</h4>
+
+                <p>为了解决这个问题，GLA 和 Mamba 等工作采用了并行扫描算法（例如 Blelloch scan）。并行扫描可以将形如 $x_t = a_t x_{t-1} + b_t$ 的一阶线性递归关系在 $O(n)$ 的工作量和 $O(\log n)$ 的步数内并行计算。这使得在训练时，既能实现数据相关门控的灵活性，又能保持高效的并行计算。</p>
+
+                <h3 class="subsection-title">4.2 Mamba：选择性状态空间模型</h3>
+                <div class="paper-ref">
+                    论文：<a href="https://arxiv.org/abs/2312.00752" target="_blank">Mamba: Linear-Time Sequence Modeling with Selective State Spaces</a>
+                </div>
+
+                <p>Mamba 将数据相关门控的思想推向了极致。它基于结构化状态空间模型（Structured State-Space Models, S4），但关键创新在于其核心参数是输入依赖的。</p>
+
+                <h4 class="subsubsection-title">4.2.1 S4 基础</h4>
+
+                <p>一个连续时间的状态空间模型可以表示为：</p>
+                <div class="formula-block">
+                    $$ \begin{aligned} \boldsymbol{h}'(t) &= \boldsymbol{A}\boldsymbol{h}(t) + \boldsymbol{B}x(t) \\ y(t) &= \boldsymbol{C}\boldsymbol{h}(t) + \boldsymbol{D}x(t) \end{aligned} $$
+                </div>
+
+                <p>通过离散化（通常使用零阶保持 ZOH），可以得到离散时间的形式：</p>
+                <div class="formula-block">
+                    $$ \begin{aligned} \boldsymbol{h}_t &= \bar{\boldsymbol{A}}\boldsymbol{h}_{t-1} + \bar{\boldsymbol{B}}x_t \\ y_t &= \bar{\boldsymbol{C}}\boldsymbol{h}_t \end{aligned} $$
+                </div>
+
+                <p>其中 $\bar{\boldsymbol{A}} = e^{\Delta \boldsymbol{A}}$ 和 $\bar{\boldsymbol{B}} = (\Delta \boldsymbol{A})^{-1}(e^{\Delta \boldsymbol{A}} - \boldsymbol{I})\Delta \boldsymbol{B}$。在 S4 中，$\boldsymbol{A}, \boldsymbol{B}, \boldsymbol{C}$ 是固定的。</p>
+
+                <h4 class="subsubsection-title">4.2.2 Mamba 的选择性机制</h4>
+
+                <p>Mamba 的核心创新是让离散化步长 $\Delta$、输入矩阵 $\boldsymbol{B}$ 和输出矩阵 $\boldsymbol{C}$ 成为当前输入 $\boldsymbol{x}_t$ 的函数：</p>
+                <div class="formula-block">
+                    $$ \begin{aligned} \Delta_t &= f_{\Delta}(\boldsymbol{x}_t) \\ \boldsymbol{B}_t &= f_{B}(\boldsymbol{x}_t) \\ \boldsymbol{C}_t &= f_{C}(\boldsymbol{x}_t) \end{aligned} $$
+                </div>
+
+                <p>这使得离散状态矩阵 $\bar{\boldsymbol{A}}_t$ 和 $\bar{\boldsymbol{B}}_t$ 在每个时间步都是动态变化的。这种“选择性”机制赋予了 Mamba 强大的能力：</p>
+                <ul>
+                    <li><strong>内容感知：</strong>可以根据输入内容动态调整其内部动力学。</li>
+                    <li><strong>信息过滤：</strong>当遇到不重要的信息时，可以设置一个较大的 $\Delta_t$（对应小的衰减因子），快速遗忘历史；当遇到关键信息时，可以设置一个较小的 $\Delta_t$，将其长期保留在状态中。</li>
+                </ul>
+
+                <p>Mamba-2 进一步揭示了这种选择性 SSM 与门控线性注意力之间的深刻对偶关系，证明了它们在数学上可以相互转化，从而统一了这两个看似不同的研究方向。</p>
+
+                <h3 class="subsection-title">4.3 小结</h3>
+
+                <p>数据相关门控是线性注意力发展的一个重要里程碑。它通过引入由输入动态控制的门控机制，克服了固定衰减的局限性，使得模型能够更智能地管理上下文信息。GLA 和 Mamba 是这一方向的杰出代表，它们通过高效的并行扫描算法，在保持线性复杂度的同时，实现了强大的表达能力，在多项基准测试中达到了与 Transformer 相当甚至更好的性能。</p>
+            </div>
+        </section>
+
+        <section id="section-5" class="content-section">
+            <h2 class="section-title">5. 在线学习视角：Delta法则与纠错式更新</h2>
+            <div class="md-content">
+                <p>线性注意力的发展不止于经验性的改进。一个更深刻的理论视角来自于将其重新解释为一个在线学习（Online Learning）或测试时训练（Test-Time Training, TTT）的过程。</p>
+                <div class="paper-ref">
+                    论文：<a href="https://arxiv.org/abs/2407.04620" target="_blank">Learning to (Learn at Test Time): RNNs with Expressive Hidden States</a>
+                </div>
+                <p>在这个框架下，我们可以将键值对 $(\boldsymbol{k}_t, \boldsymbol{v}_t)$ 视为源源不断的训练样本，而状态矩阵 $\boldsymbol{S}_t$ 则是模型需要学习的参数。每当一个新样本 $(\boldsymbol{k}_t, \boldsymbol{v}_t)$ 到来，模型的目标就是更新其“参数” $\boldsymbol{S}_{t-1}$，使得新模型 $\boldsymbol{S}_t$ 在输入 $\boldsymbol{k}_t$
+                    时能更好地预测出 $\boldsymbol{v}_t$。</p>
+
+                <h3 class="subsection-title">5.1 梯度下降作为更新规则</h3>
+
+                <p>这个过程可以用梯度下降来描述。首先，定义预测函数和损失函数：</p>
+                <ul>
+                    <li><strong>预测函数：</strong> $\hat{\boldsymbol{v}}_t = \boldsymbol{f}(\boldsymbol{S}_{t-1}; \boldsymbol{k}_t) = \boldsymbol{k}_t^\top \boldsymbol{S}_{t-1}$</li>
+                    <li><strong>损失函数：</strong> $\mathcal{L}_t = \frac{1}{2} \| \hat{\boldsymbol{v}}_t - \boldsymbol{v}_t \|_2^2$</li>
+                </ul>
+                <p>对 $\boldsymbol{S}_{t-1}$ 求梯度，得到：</p>
+                <div class="formula-block">
+                    $$ \nabla_{\boldsymbol{S}_{t-1}} \mathcal{L}_t = \boldsymbol{k}_t (\boldsymbol{k}_t^\top \boldsymbol{S}_{t-1} - \boldsymbol{v}_t)^\top = \boldsymbol{k}_t (\hat{\boldsymbol{v}}_t - \boldsymbol{v}_t)^\top $$
+                </div>
+                <p>应用梯度下降更新规则 $\boldsymbol{S}_t = \boldsymbol{S}_{t-1} - \eta_t \nabla_{\boldsymbol{S}_{t-1}} \mathcal{L}_t$，其中 $\eta_t$ 是学习率，我们得到：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{S}_t = \boldsymbol{S}_{t-1} - \eta_t \boldsymbol{k}_t (\boldsymbol{k}_t^\top \boldsymbol{S}_{t-1} - \boldsymbol{v}_t)^\top = \boldsymbol{S}_{t-1} (\boldsymbol{I} - \eta_t \boldsymbol{k}_t \boldsymbol{k}_t^\top) + \eta_t \boldsymbol{v}_t
+                    \boldsymbol{k}_t^\top $$
+                </div>
+
+                <h3 class="subsection-title">5.2 DeltaNet：Delta 法则的现代化身</h3>
+                <div class="paper-ref">
+                    论文：<a href="https://arxiv.org/abs/2406.06484" target="_blank">Parallelizing Linear Transformers with the Delta Rule over Sequence Length</a>
+                </div>
+
+                <p>这个更新规则被称为 <strong>Delta Rule</strong>，其模型对应物是 <strong>DeltaNet</strong>。这个公式有非常强的直观解释，可以分解为两步：</p>
+                <ol>
+                    <li><strong>遗忘/修正步骤 (Forgetting/Correction)：</strong> $\boldsymbol{S}_{t-1} \rightarrow \boldsymbol{S}_{t-1} (\boldsymbol{I} - \eta_t \boldsymbol{k}_t \boldsymbol{k}_t^\top)$。这一项通过一个秩-1的投影来“抹除”或“修正”模型中关于 $\boldsymbol{k}_t$ 的旧有知识。如果模型对
+                        $\boldsymbol{k}_t$ 的旧有预测是错误的，这一步会减弱与之相关的连接。</li>
+                    <li><strong>写入/学习步骤 (Writing/Learning)：</strong> $+ \eta_t \boldsymbol{v}_t \boldsymbol{k}_t^\top$。这一项与标准线性注意力的更新项相同，负责“写入”关于新键值对 $(\boldsymbol{k}_t, \boldsymbol{v}_t)$ 的新关联。</li>
+                </ol>
+
+                <p>这种“纠错式”更新机制被证明在需要精确联想回忆的任务（如多查询关联检索）中具有卓越的性能，因为它不仅仅是累加信息，而是在学习过程中不断修正已有的知识。</p>
+
+                <h3 class="subsection-title">5.3 Gated DeltaNet 与硬件高效并行</h3>
+
+                <p>Gated DeltaNet 进一步将 Delta Rule 与数据相关门控结合，引入了额外的门控 $\alpha_t$ 和 $\beta_t$：</p>
+                <div class="formula-block">
+                    $$ \boldsymbol{S}_t = \alpha_t \boldsymbol{S}_{t-1} (\boldsymbol{I} - \beta_t \boldsymbol{k}_t \boldsymbol{k}_t^\top) + \beta_t \boldsymbol{v}_t \boldsymbol{k}_t^\top $$
+                </div>
+                <p>这使得模型可以动态地控制遗忘和学习的程度。然而，Delta Rule 的更新形式，尤其是 $(\boldsymbol{I} - \eta_t \boldsymbol{k}_t \boldsymbol{k}_t^\top)$ 这一项，使得并行化变得非常棘手。</p>
+
+                <p>最近的研究通过利用 Householder 变换的性质，成功地将 DeltaNet 的计算过程并行化。Householder 变换是一种反射变换，可以表示为 $\boldsymbol{H} = \boldsymbol{I} - 2\boldsymbol{u}\boldsymbol{u}^\top$。通过将 Delta Rule 的更新项与 Householder 变换关联起来，研究者们设计出了高效的分块并行算法，使得 DeltaNet 及其变体也能够像 RetNet
+                    一样在 GPU 上高效训练。</p>
+
+                <h3 class="subsection-title">5.4 小结</h3>
+
+                <p>将线性注意力视为在线学习过程，为设计更强大的序列模型提供了坚实的理论基础。DeltaNet 基于经典的 Delta Rule，通过梯度下降的视角推导出一种纠错式的更新机制，增强了模型的联想记忆能力。尽管其形式复杂，但通过先进的数值代数技巧，DeltaNet 及其变体也能够实现高效的并行训练，代表了线性注意力领域理论与实践结合的前沿。</p>
+            </div>
+        </section>
+
+        <section id="section-6" class="content-section">
+            <h2 class="section-title">6. 状态空间模型的融合</h2>
+            <div class="md-content">
+                <p>线性注意力的思想也与另一条独立发展的技术路线——状态空间模型（State Space Models, SSM）——发生了深刻的交汇，催生了 Mamba 和 RWKV 等强大的架构。</p>
+
+                <h3 class="subsection-title">Mamba 与 SSM-Attention 对偶性</h3>
+                <div class="paper-ref">
+                    论文: <a href="https://arxiv.org/abs/2312.00752" target="_blank">Mamba: Linear-Time Sequence Modeling with Selective State Spaces</a>, <a href="https://arxiv.org/abs/2405.21060" target="_blank">Transformers are SSMs...</a>
+                </div>
+                <p>Mamba 的核心是一种特殊的SSM，其状态更新依赖于输入的动态变化，即“选择性”状态空间。其关键创新在于状态矩阵 $\boldsymbol{A}$ 和输入矩阵 $\boldsymbol{B}$ 是输入 $\boldsymbol{x}_t$ 的函数，这使得模型能够根据内容动态地调整其内部动力学，实现对信息的选择性过滤和记忆。</p>
+                <p>Mamba-2 的工作进一步揭示了 SSM 与门控线性注意力之间的“对偶性”：一个门控线性注意力模型可以被精确地重写为一个结构化的SSM，反之亦然。这两种看似不同的范式在数学上是等价的，只是从不同的角度看待同一个计算过程。这一发现统一了这两个领域，并催生了结合两者优点的混合架构。</p>
+
+                <h3 class="subsection-title">RWKV</h3>
+                <div class="paper-ref">
+                    论文: <a href="https://arxiv.org/abs/2305.13048" target="_blank">RWKV: Reinventing RNNs for the Transformer Era</a>
+                </div>
+                <p>RWKV 是一个完全基于 RNN 范式设计的模型，但它巧妙地融合了 Transformer 的元素。其核心的 Time-mixing 模块可以被看作是一种特殊形式的线性注意力，其中 Query 是位置无关的，而 Key 和 Value 则带有随时间指数衰减的位置编码。具体来说，其 recurrence 可以被看作是 AFT (Attention-Free Transformer) 的一种带衰减的变体。RWKV 的设计使其在推理时是纯粹的 RNN 模式，内存占用极小，而在训练时又可以转化为类似
+                    Transformer 的并行形式，兼顾了效率和性能。</p>
+            </div>
+        </section>
+
+        <section id="section-7" class="content-section">
+            <h2 class="section-title">7. 对数线性复杂度方案</h2>
+            <div class="md-content">
+                <div class="highlight-box">
+                    <strong>核心权衡：</strong>平方复杂度 ($O(n^2)$) 表达能力强但代价高昂，线性复杂度 ($O(n)$) 高效但存在状态瓶颈。对数线性复杂度 ($O(n \log n)$) 旨在寻找一个更优的平衡点。
+                </div>
+                <p><strong>Log-Linear Attention</strong> 提供了一种优雅的折中方案，它在保持高效计算的同时，允许模型的记忆容量随序列长度对数增长。</p>
+                <div class="paper-ref">
+                    论文：<a href="https://arxiv.org/abs/2506.04761" target="_blank">Log-Linear Attention</a>
+                </div>
+                <p>Log-Linear Attention 的核心思想是，不再维护一个单一的、固定大小的状态，而是维护一个随序列长度 $T$ 对数增长的、大小为 $O(\log T)$ 的状态集合。它借鉴了 Fenwick 树（或称二叉索引树）的数据结构思想，对历史信息进行层级化的、多尺度的总结。</p>
+
+                <p>具体来说，在 $t$ 时刻，历史序列 $[0, t)$ 被划分为 $O(\log t)$ 个不相交的块，每个块对应 Fenwick 树的一个节点。例如，在 $t=7$ (二进制 111) 时，历史 $[0, 6]$ 可能被划分为 $[0, 3], [4, 5], [6, 6]$ 三个块。每个块内部维护一个线性注意力的状态。查询 $\boldsymbol{q}_t$ 会与这 $O(\log t)$ 个状态分别进行交互，然后将结果加权求和。这种机制使得：</p>
+                <ul>
+                    <li><strong>近期信息更精细：</strong> 近期的 token 位于尺寸更小的块中，其信息被更精细地保留。</li>
+                    <li><strong>远期信息被压缩：</strong> 久远的 token 被逐步合并到尺寸更大的块中，其信息被更粗粒度地总结。</li>
+                    <li><strong>复杂度可控：</strong> 推理时，内存和计算复杂度均为 $O(d^2 \log T)$；训练时，复杂度为 $O(T d^2 \log T)$。</li>
+                </ul>
+                <p>这种设计在效率和表达能力之间取得了极佳的平衡，尤其适合那些既需要长程依赖又对近期信息更敏感的任务。</p>
+            </div>
+        </section>
+
+        <section id="section-8" class="content-section">
+            <h2 class="section-title">8. 线性思想对Softmax的影响</h2>
+            <div class="md-content">
+                <p>有趣的是，线性注意力中发展的许多思想，如今开始“反哺”传统的 Softmax 注意力，催生了新的变体，旨在增强其外推能力和特定任务的性能。</p>
+                <ul>
+                    <li><strong>ALiBi (Attention with Linear Biases):</strong> 将 RetNet 中的指数衰减思想简化并应用到 Softmax 注意力中。它在计算 $\boldsymbol{Q}\boldsymbol{K}^\top$ 后，给注意力分数矩阵加上一个随距离线性递减的偏置项。这个偏置是固定的，不参与训练，却能极大地增强模型对未见过的更长序列的外推能力。</li>
+                    <li><strong>In-context Learning as Attention:</strong> 一些研究表明，标准注意力机制中的 $\boldsymbol{Q}\boldsymbol{K}^\top \boldsymbol{V}$ 操作可以看作是模型在上下文（由 K 和 V 定义）中进行一次梯度下降的近似。这种视角将 Transformer 的上下文学习能力与优化理论联系起来，为设计更强大的注意力机制提供了新思路。</li>
+                </ul>
+                <p>这些工作表明，线性和平方两种范式并非完全对立，它们的思想正在相互渗透、融合，共同推动着注意力机制的边界。</p>
+            </div>
+        </section>
+
+        <section id="section-9" class="content-section">
+            <h2 class="section-title">9. 硬件实现与优化</h2>
+            <div class="md-content">
+                <p>理论上的复杂度降低需要高效的硬件实现才能转化为实际的速度提升。针对线性注意力的 GPU Kernel 优化已成为一个活跃的研究领域。</p>
+                <h3 class="subsection-title">9.1 分块并行与 FlashAttention 思想</h3>
+                <p>如前所述，分块并行是训练线性注意力的关键。现代实现，如 <a href="https://arxiv.org/abs/2401.04658" target="_blank">Lightning Attention-2</a>，借鉴了 FlashAttention 的思想，通过精心设计的 tiling 策略和对 GPU 内存层次（HBM, SRAM）的充分利用，最大限度地减少了高延迟的 HBM 读写次数。</p>
+                <div class="algorithm-box">
+                    <h4>Lightning Attention-2 算法流程</h4>
+                    <ol>
+                        <li>将输入序列 Q, K, V 分成大小为 B 的块。</li>
+                        <li><strong>循环遍历每个块 $i$：</strong></li>
+                        <ul>
+                            <li>将块 $Q_i, K_i, V_i$ 从 HBM 加载到高速的 SRAM 中。</li>
+                            <li><strong>块内计算：</strong>在 SRAM 中，使用标准 $O(B^2)$ 注意力计算块内输出。由于 B 很小（如 256），这部分计算非常快。</li>
+                            <li><strong>块间计算：</strong>将当前块的 K, V 更新到全局的 RNN 状态中，并用该状态与 $Q_i$ 计算块间输出。</li>
+                            <li>将块内和块间输出相加，写回 HBM。</li>
+                        </ul>
+                    </ol>
+                </div>
+                <p>这种 IO-aware 的设计使得线性注意力的实际训练速度能够真正达到甚至超越高度优化的 FlashAttention-2，特别是在长序列场景下。</p>
+
+                <h3 class="subsection-title">9.2 Triton 编程语言</h3>
+                <p>为了快速开发和迭代高性能的 GPU Kernel，OpenAI 开发的 Triton 语言发挥了重要作用。Triton 是一种基于 Python 的 DSL（领域特定语言），它允许研究人员用类似 NumPy 的语法编写 GPU 代码，而编译器会自动处理复杂的并行化、内存管理和指令调度，生成高效的 PTX/SASS 代码。许多 SOTA 的线性注意力实现（如 Mamba、GLA、Lightning Attention）都得益于 Triton 带来的开发便利性和高性能。</p>
+            </div>
+        </section>
+
+        <section id="section-10" class="content-section">
+            <h2 class="section-title">10. 工业级应用实践</h2>
+            <div class="md-content">
+                <p>线性注意力的理论优势正逐渐转化为实际的工业级应用。越来越多的团队在开发和部署基于线性注意力或其变体（如 Mamba、RWKV）的大型语言模型。</p>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>模型</th>
+                            <th>核心技术</th>
+                            <th>规模/特点</th>
+                            <th>优势</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Eagle & Finch (RWKV-6/7)</strong></td>
+                            <td>RWKV 架构</td>
+                            <td>高达 7B 参数</td>
+                            <td>极低的推理成本，适合边缘部署</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Falcon Mamba</strong></td>
+                            <td>Mamba-2</td>
+                            <td>多尺度模型</td>
+                            <td>在长上下文任务上表现优于部分 Transformer</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Jamba</strong></td>
+                            <td>混合 Transformer-Mamba</td>
+                            <td>52B 参数，256K 上下文</td>
+                            <td>结合了 Transformer 的表达能力和 Mamba 的效率</td>
+                        </tr>
+                        <tr>
+                            <td><strong>MiniMax-01</strong></td>
+                            <td>Lightning Attention</td>
+                            <td>千亿参数级别</td>
+                            <td>在保持长上下文处理能力的同时，实现了极高的训练和推理效率</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>这些模型的成功证明了线性注意力及其相关技术已经成熟，足以支撑起最先进的大型语言模型，并在长上下文、高效率方面展现出独特的优势。</p>
+            </div>
+        </section>
+
+        <section id="section-11" class="content-section">
+            <h2 class="section-title">11. 总结与展望</h2>
+            <div class="conclusion">
+                <h3>核心思想演进</h3>
+                <p>从 $O(n^2)$ 到 $O(n)$ 的演进，是一场算法、工程与理论的协同创新。其核心在于通过<strong>改变计算顺序</strong>和引入<strong>循环状态</strong>，将全局的、一次性的比较，转变为局部的、迭代式的更新。这条技术路线深刻地受到了 RNN 思想的影响，并最终与状态空间模型等领域交叉融合，形成了百花齐放的局面。</p>
+                <div class="highlight-box" style="border-color: #d9534f; background-color: #fdf7f7;">
+                    <strong>没有免费的午餐：平方复杂度的价值</strong>
+                    <p>尽管线性注意力在效率上取得了巨大成功，但我们必须承认，为了效率，它确实牺牲了部分表达能力。平方复杂度的 Full Attention 能够无损地保留序列中任意两个位置间的完整信息，它构建了一个完全图，每个节点都能直接看到其他所有节点。这种全局的、一步到位的视角对于某些需要复杂、精细的依赖关系建模的任务（例如多步推理）可能是至关重要的。</p>
+                    <p>线性注意力通过一个固定大小（或对数增长）的状态对历史进行“有损压缩”，这必然会丢失部分信息。它更像一个链式图，信息需要一步步传递。因此，选择哪种架构，永远是在特定任务需求、硬件资源和性能目标之间进行的深刻权衡。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-ref" class="content-section">
+            <h2 class="section-title">12. 参考文献</h2>
+            <div class="md-content">
+                <ul>
+                    <li>Vaswani, A., et al. (2017). <em>Attention is all you need</em>. <a href="https://arxiv.org/abs/1706.03762" target="_blank">arXiv:1706.03762</a>.</li>
+                    <li>Katharopoulos, A., et al. (2020). <em>Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention</em>. <a href="https://arxiv.org/abs/2006.16236" target="_blank">arXiv:2006.16236</a>.</li>
+                    <li>Sun, Y., et al. (2023). <em>Retentive Network: A Successor to Transformer for Large Language Models</em>. <a href="https://arxiv.org/abs/2307.08621" target="_blank">arXiv:2307.08621</a>.</li>
+                    <li>Yang, S., et al. (2023). <em>Gated Linear Attention Transformers with Hardware-Efficient Training</em>. <a href="https://arxiv.org/abs/2312.06635" target="_blank">arXiv:2312.06635</a>.</li>
+                    <li>Sun, Y., et al. (2024). <em>Learning to (Learn at Test Time): RNNs with Expressive Hidden States</em>. (TTT) <a href="https://arxiv.org/abs/2407.04620" target="_blank">arXiv:2407.04620</a>.</li>
+                    <li>Yang, S., et al. (2024). <em>Parallelizing Linear Transformers with the Delta Rule over Sequence Length</em>. (DeltaNet) <a href="https://arxiv.org/abs/2406.06484" target="_blank">arXiv:2406.06484</a>.</li>
+                    <li>Gu, A., & Dao, T. (2023). <em>Mamba: Linear-Time Sequence Modeling with Selective State Spaces</em>. <a href="https://arxiv.org/abs/2312.00752" target="_blank">arXiv:2312.00752</a>.</li>
+                    <li>Dao, T., & Gu, A. (2024). <em>Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality</em>. (Mamba-2) <a href="https://arxiv.org/abs/2405.21060" target="_blank">arXiv:2405.21060</a>.</li>
+                    <li>Peng, B., et al. (2023). <em>RWKV: Reinventing RNNs for the Transformer Era</em>. <a href="https://arxiv.org/abs/2305.13048" target="_blank">arXiv:2305.13048</a>.</li>
+                    <li>Guo, H., et al. (2024). <em>Log-Linear Attention</em>. <a href="https://arxiv.org/abs/2506.04761" target="_blank">arXiv:2506.04761</a>.</li>
+                    <li>Qin, Z., et al. (2024). <em>Lightning Attention-2: A Free Lunch for Handling Unlimited Sequence Lengths in Large Language Models</em>. <a href="https://arxiv.org/abs/2401.04658" target="_blank">arXiv:2401.04658</a>.</li>
+                    <li>Ratner, N., et al. (2024). <em>Jamba: A Hybrid Transformer-Mamba Language Model</em>. <a href="https://arxiv.org/abs/2403.19887" target="_blank">arXiv:2403.19887</a>.</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>网页制作: Gemini 2.5 Pro</p>
+            <p>内容校对: 荒原猎码人Zero</p>
+        </footer>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.content-section');
+            const mainContent = document.querySelector('.main-container');
+            const authorInfo = document.getElementById('author-info');
+
+            // Calculate word count and reading time
+            const text = mainContent.innerText || mainContent.textContent;
+            const wordCount = text.replace(/[\s\n\r]/g, '').length;
+            const wordsPerMinute = 1000; // Average reading speed for Chinese
+            const readingTime = Math.ceil(wordCount / wordsPerMinute);
+
+            const readingInfo = document.createElement('div');
+            readingInfo.style.marginTop = '10px';
+            readingInfo.innerHTML = `全文约 5137 字，预计阅读时间 ${readingTime} 分钟`;
+            authorInfo.appendChild(readingInfo);
+
+
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === `#${id}`) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, {
+                rootMargin: '-30% 0px -60% 0px',
+                threshold: 0
+            });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+
+</html>
