@@ -1,0 +1,32 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="ignoredPackages">
+        <list>
+          <option value="torch" />
+          <option value="torchvision" />
+          <option value="transformers" />
+          <option value="datasets" />
+          <option value="accelerate" />
+          <option value="tokenizers" />
+          <option value="trl" />
+          <option value="deepspeed" />
+          <option value="peft" />
+          <option value="bitsandbytes" />
+          <option value="wandb" />
+          <option value="sentencepiece" />
+          <option value="fasttext-langdetect" />
+          <option value="pyyaml" />
+          <option value="Pillow" />
+          <option value="tqdm" />
+          <option value="ruff" />
+          <option value="fastapi" />
+          <option value="uvicorn" />
+          <option value="jsonargparse" />
+          <option value="pytest" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
