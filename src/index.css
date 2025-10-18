@@ -1,0 +1,10 @@
+/* 这里的样式通常被并入 App.css，但保留文件以防万一 */
+/* 如果您愿意，可以将这里的样式移动到 App.css 的 body 选择器中，然后删除此文件和在 index.tsx 中的引用 */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

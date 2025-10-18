@@ -499,11 +499,11 @@ Model continues: "
                 <p>TIR通过让模型生成一段简洁的代码（Token成本为 $O(1)$）来替代这种冗长的文本模拟（Token成本为 $\Omega(N)$），从而使得大量复杂的算法策略（如迭代、搜索、动态规划）在有限的Token预算内变得<strong>可行</strong>。这正是论文所说的，TIR严格地扩展了模型的<strong>可行支持集（Feasible Support）</strong>。</p>
 
                 <div class="image-container">
-                    <img src=./figure_3.png alt="Flow of Problem Solvability from Pure-text to TIR model">
+                    <img src=Code/figure_3.png alt="Flow of Problem Solvability from Pure-text to TIR model">
                     <figcaption>论文图3: 问题可解性流动图. 从纯文本模型到TIR模型, “能力扩展”(Expansion)部分(15.4%)远大于“能力萎缩”(Shrinkage)部分(1.8%), 直观展示了TIR带来的巨大净收益.</figcaption>
                 </div>
                 <div class="image-container">
-                    <img src=./figure_2.png alt="Pass@k curves for TIR and Pure-text models">
+                    <img src=Code/figure_2.png alt="Pass@k curves for TIR and Pure-text models">
                     <figcaption>论文图2: Pass@k曲线对比. 在多个数学基准测试中, TIR模型(橙线)的性能在所有采样数k下都显著高于纯文本模型(蓝线), 表明TIR全面提升了模型的解题潜力, 而非简单的“首答正确率”优化.</figcaption>
                 </div>
             </div>
@@ -538,7 +538,7 @@ Model continues: "
                 <p>这个公式的关键在于它直接作用于最终的优势值，并且通过裁剪保证了塑形信号始终是主信号的“微调”， 从而实现了稳定而有效的行为引导。</p>
 
                 <div class="image-container">
-                    <img src=./figure_6.png alt="Evaluation results of ASPO for early code invocation">
+                    <img src=Code/figure_6.png alt="Evaluation results of ASPO for early code invocation">
                     <figcaption>论文图6: ASPO算法对模型行为的影响. 通过ASPO算法(红线/灰线)激励早期代码调用后, 模型的代码调用时机(b)显著提前, 调用次数(e)大幅增加, 且行为更具交互性, 而不牺牲最终的解题性能. 这证明了TIR范式下对模型推理行为进行细粒度引导的可行性.</figcaption>
                 </div>
             </div>
