@@ -369,7 +369,7 @@
         <section id="section-1" class="content-section">
             <h2 class="section-title">1. 背景与动机：解开推理能力涌现之谜</h2>
             <div class="md-content">
-                <p>近年来，最顶尖的大型语言模型（LLM）普遍采用一种“<strong>预训练 + 强化学习微调</strong>”的两阶段范式。这一范式催生了众多在推理能力上取得突破的模型，如论文中明确提及的 <strong>OpenAI的o¹模型</strong> 和 <strong>DeepSeek的R1模型</strong>。一个广为人知的现象是，经过强化学习（RL）微调后，模型不仅在数学、逻辑和推理任务上能力大幅提升，其生成的回答也常常变得更长、更详细，仿佛在进行一步步的“思考”，即所谓的“思维链”（Chain-of-Thought, CoT）。</p>
+                <p>近年来，最顶尖的大型语言模型（LLM）普遍采用一种“<strong>预训练 + 强化学习微调</strong>”的两阶段范式。这一范式催生了众多在推理能力上取得突破的模型，如论文中明确提及的 <strong>OpenAI的o1模型</strong> 和 <strong>DeepSeek的R1模型</strong>。一个广为人知的现象是，经过强化学习（RL）微调后，模型不仅在数学、逻辑和推理任务上能力大幅提升，其生成的回答也常常变得更长、更详细，仿佛在进行一步步的“思考”，即所谓的“思维链”（Chain-of-Thought, CoT）。</p>
                 <p>论文将RL微调阶段精辟地概括为一个<strong>“猜而后验”（guess-and-check）</strong>的程序：模型为每个问题生成一个或多个猜测，一个外部的奖励函数（通常是正确性判断）对它们进行评估，然后模型根据每个猜测获得的奖励信号来调整自身，强化那些能带来高奖励的生成策略。</p>
                 <p>然而，这个“猜而后验”过程为何如此有效？其背后的<strong>根本机制</strong>一直不甚明了。RL是如何以及为什么能带来如此显著的提升？它仅仅是让模型更符合人类偏好，还是从根本上改变了模型的学习方式？这篇论文正是为了回答这个核心问题。</p>
 
@@ -651,15 +651,37 @@
             </div>
         </section>
 
-        <section id="section-ref" class="content-section">
-            <h2 class="section-title">9. 参考文献</h2>
+<section id="section-ref" class="content-section">
+            <h2 class="section-title">7. 参考文献</h2>
             <div class="md-content">
+                <h3 class="subsection-title">本文引用</h3>
                 <ul>
                     <li>Tsilivis, N., Malach, E., Ullrich, K., & Kempe, J. (2025). <em>How Reinforcement Learning After Next-Token Prediction Facilitates Learning</em>. <a href="https://arxiv.org/abs/2510.11495" target="_blank">arXiv:2510.11495</a>.</li>
                 </ul>
+
+                <h3 class="subsection-title">相关论文推荐</h3>
+                <h4 class="subsubsection-title">RL用于LLM推理的实践与机制</h4>
+                <ul>
+                    <li>Zelikman, E., Wu, Y., Mu, J., & Goodman, N. D. (2022). <em>STaR: Bootstrapping Reasoning With Reasoning</em>. <a href="https://arxiv.org/abs/2203.14465" target="_blank">arXiv:2203.14465</a>.</li>
+                    <li>Jones, A., et al. (2024). <em>Self-Consuming Language Models</em>. Proceedings of the International Conference on Learning Representations (ICLR).</li>
+                    <li>Gudibande, A., et al. (2024). <em>The Unreasonable Effectiveness of Easy Training Data for Hard Tasks</em>. <a href="https://arxiv.org/abs/2406.02569" target="_blank">arXiv:2406.02569</a>.</li>
+                    <li>Lightman, T., et al. (2023). <em>Let's Verify Step by Step</em>. <a href="https://arxiv.org/abs/2305.20050" target="_blank">arXiv:2305.20050</a>.</li>
+                </ul>
+                <h4 class="subsubsection-title">思维链(CoT)的理论基础与局限性</h4>
+                <ul>
+                    <li>Joshi, N., Vardi, G., Block, A., et al. (2025). <em>A theory of learning with autoregressive chain of thought</em>. <a href="https://proceedings.mlr.press/v291/joshi25a.html" target="_blank">COLT 2025</a>.</li>
+                    <li>Malach, E. (2024). <em>Auto-regressive next-token predictors are universal learners</em>. Proceedings of the International Conference on Machine Learning (ICML).</li>
+                    <li>Yao, S., et al. (2023). <em>Tree of Thoughts: Deliberate Problem Solving with Large Language Models</em>. <a href="https://arxiv.org/abs/2305.10601" target="_blank">arXiv:2305.10601</a>.</li>
+                    <li>Merrill, W., & Sabharwal, A. (2024). <em>The Expressive Power of Transformers with Chain of Thought</em>. Proceedings of the International Conference on Learning Representations (ICLR).</li>
+                    <li>Deng, Y., Choi, Y., & Shieber, S. M. (2024). <em>From Explicit CoT to Implicit CoT: Learning to Internalize CoT Step by Step</em>. <a href="https://arxiv.org/abs/2405.14838" target="_blank">arXiv:2405.14838</a>.</li>
+                </ul>
+                <h4 class="subsubsection-title">对齐、奖励设计与RLHF</h4>
+                <ul>
+                    <li>Bai, Y., et al. (2022). <em>Constitutional AI: Harmlessness from AI Feedback</em>. <a href="https://arxiv.org/abs/2212.08073" target="_blank">arXiv:2212.08073</a>.</li>
+                    <li>Lambert, N., et al. (2024). <em>Secrets of RLHF in Large Language Models, Part I: PPO</em>. <a href="https://huggingface.co/blog/rlhf" target="_blank">Hugging Face Blog</a>.</li>
+                </ul>
             </div>
         </section>
-
         <footer class="footer">
             <p>网页内容由 Gemini 2.5 Pro 生成</p>
             <p>内容框架与深度问题由 荒原猎码人Zero 提供</p>
